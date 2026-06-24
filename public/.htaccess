@@ -1,0 +1,18 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # API Routes
+    RewriteRule ^api/(.+)$ api/$1.php [L,QSA]
+    
+    # Verify Route
+    RewriteRule ^verify/([a-z0-9]+)$ verify.php?id=$1 [L,QSA]
+    
+    # Static files
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+    
+    # Everything else to index.php
+    RewriteRule ^(.*)$ index.php [L,QSA]
+</IfModule>

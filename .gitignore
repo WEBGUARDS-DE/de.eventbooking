@@ -1,0 +1,20 @@
+# Environment
+.env
+.env.local
+
+# Data
+/data/
+!data/.gitkeep
+!data/log/.gitkeep
+
+# Vendor
+/vendor/
+composer.lock
+
+# OS
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log

@@ -1,0 +1,14 @@
+{
+    "name": "webguards-de/de.eventbooking",
+    "description": "Multi-Termin Ticket-Buchungssystem mit Stripe",
+    "require": {
+        "php": ">=7.4",
+        "stripe/stripe-php": "^13.0",
+        "phpqrcode/phpqrcode": "^2.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "EventBooking\\": "src/"
+        }
+    }
+}
