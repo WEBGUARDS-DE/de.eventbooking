@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.DS_Store
+node_modules
+npm-debug.log
+.vscode
+.idea
+data/
+vendor/
+*.log
+README.md
+DOCKER.md
+STRUCTURE.md
+.htaccess

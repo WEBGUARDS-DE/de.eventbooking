@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  eventbooking:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eventbooking
+    image: webguards/eventbooking:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./data:/var/www/html/data
+      - ./.env:/var/www/html/.env:ro
+    environment:
+      - APACHE_RUN_USER=www-data
+      - APACHE_RUN_GROUP=www-data
+      - APACHE_LOG_DIR=/var/log/apache2
+      - APACHE_PID_FILE=/var/run/apache2.pid
+      - APACHE_RUN_DIR=/var/run/apache2
+    restart: unless-stopped
+    networks:
+      - webguards-net
+    labels:
+      - "com.webguards.app=eventbooking"
+      - "com.webguards.description=Multi-Termin Ticket-Buchungssystem"
+
+networks:
+  webguards-net:
+    external: true
+    driver: bridge
