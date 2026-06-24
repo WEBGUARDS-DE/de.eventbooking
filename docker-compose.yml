@@ -1,32 +1,28 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  eventbooking:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: eventbooking
-    image: webguards/eventbooking:latest
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./data:/var/www/html/data
-      - ./.env:/var/www/html/.env:ro
-    environment:
-      - APACHE_RUN_USER=www-data
-      - APACHE_RUN_GROUP=www-data
-      - APACHE_LOG_DIR=/var/log/apache2
-      - APACHE_PID_FILE=/var/run/apache2.pid
-      - APACHE_RUN_DIR=/var/run/apache2
+  de-eventbooking:
+    image: php:8-apache
+    container_name: de-eventbooking
     restart: unless-stopped
+
+    working_dir: /var/www/html
+
+    volumes:
+      - /opt/containers/websites/de-eventbooking:/var/www/html
+      - /opt/containers/websites/apache/servername.conf:/etc/apache2/conf-available/servername.conf
+    
     networks:
-      - webguards-net
+      - traefik-proxy
+
     labels:
-      - "com.webguards.app=eventbooking"
-      - "com.webguards.description=Multi-Termin Ticket-Buchungssystem"
+      - traefik.enable=true
+      - traefik.http.routers.de-eventbooking.entrypoints=https
+      - traefik.http.routers.de-eventbooking.tls=true
+      - traefik.http.routers.de-eventbooking.tls.certresolver=http
+      - traefik.http.routers.de-eventbooking.rule=Host(`tickets.ob5.de`)
+      - traefik.http.services.de-eventbooking.loadbalancer.server.port=80
 
 networks:
-  webguards-net:
+  traefik-proxy:
     external: true
-    driver: bridge

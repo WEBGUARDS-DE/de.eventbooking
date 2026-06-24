@@ -1,114 +1,146 @@
-# Docker Deployment
+# Docker Deployment — Portainer + Traefik
 
-Deployment mit Docker + Portainer.
+Deployment mit Portainer Stack + Traefik Reverse Proxy.
 
 ---
 
-## 🚀 Quick Start (Portainer)
+## 📋 Vorbereitung
 
-### 1. Stack erstellen
-
-In Portainer:
-1. **Stacks** → **Add Stack**
-2. **Name:** `eventbooking`
-3. **Compose** Textfeld:
+### 1. Verzeichnis auf Host erstellen
 
 ```bash
-git clone https://github.com/WEBGUARDS-DE/de.eventbooking.git
-cd de.eventbooking
-cat docker-compose.yml
-```
+mkdir -p /opt/containers/websites/de-eventbooking
+cd /opt/containers/websites/de-eventbooking
 
-→ Inhalt copieren & in Portainer einfügen
+# Repo clonen
+git clone https://github.com/WEBGUARDS-DE/de.eventbooking.git .
 
-### 2. .env datei
-
-Vor dem Deploy:
-```bash
+# .env vorbereiten
 cp .env.example .env
-# Stripe Keys + Event-Details eintragen
+nano .env  # Stripe Keys + Event-Details eintragen
 ```
 
-Upload .env zu Server oder als **Environment Variable** in Portainer.
+### 2. Apache Konfiguration
 
-### 3. Deploy
+Stelle sicher, dass `/opt/containers/websites/apache/servername.conf` existiert:
+
+```apache
+# /opt/containers/websites/apache/servername.conf
+<VirtualHost *:80>
+    ServerName tickets.ob5.de
+    DocumentRoot /var/www/html/public
+    
+    <Directory /var/www/html/public>
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+```
+
+---
+
+## 🚀 Portainer Stack Deploy
+
+### 1. In Portainer: Stacks → Add Stack
+
+**Name:** `de-eventbooking`
+
+**Compose:**
+```yaml
+version: "3.9"
+
+services:
+  de-eventbooking:
+    image: php:8-apache
+    container_name: de-eventbooking
+    restart: unless-stopped
+
+    working_dir: /var/www/html
+
+    volumes:
+      - /opt/containers/websites/de-eventbooking:/var/www/html
+      - /opt/containers/websites/apache/servername.conf:/etc/apache2/conf-available/servername.conf
+    
+    networks:
+      - traefik-proxy
+
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.de-eventbooking.entrypoints=https
+      - traefik.http.routers.de-eventbooking.tls=true
+      - traefik.http.routers.de-eventbooking.tls.certresolver=http
+      - traefik.http.routers.de-eventbooking.rule=Host(`tickets.ob5.de`)
+      - traefik.http.services.de-eventbooking.loadbalancer.server.port=80
+
+networks:
+  traefik-proxy:
+    external: true
+```
+
+### 2. Deploy
 
 Portainer → **Deploy the Stack**
 
-Container lädt automatisch:
-- ✅ PHP 8 Apache Image
-- ✅ Dependencies (Composer)
-- ✅ Datenverzeichnisse
-
 ---
 
-## 🛠️ Lokales Testen
+## 🔧 Setup im Container
+
+Nach dem Deploy muss noch initialisiert werden:
 
 ```bash
-# .env vorbereiten
-cp .env.example .env
-nano .env  # Stripe Keys eingeben
+# In Container gehen
+docker exec -it de-eventbooking /bin/bash
 
-# Build & Run
-docker-compose build
-docker-compose up -d
+# Composer dependencies installieren
+cd /var/www/html
+composer install --no-dev --optimize-autoloader
 
-# Logs
-docker-compose logs -f eventbooking
+# Datenverzeichnisse vorbereiten
+mkdir -p data/log data/qrcodes
+chmod 755 data
+chmod 755 data/log data/qrcodes
+touch data/termine.json data/tickets.json
+chmod 666 data/termine.json data/tickets.json
 
-# Stoppen
-docker-compose down
+# Apache mod_rewrite aktivieren
+a2enmod rewrite
+a2enconf servername
+systemctl reload apache2
+
+exit
 ```
 
 ---
 
-## 📁 Volumes
+## ✅ Verify
 
-| Host | Container | Zweck |
-|------|-----------|-------|
-| `./data` | `/var/www/html/data` | Tickets, Termine, QR-Codes (persistent) |
-| `./.env` | `/var/www/html/.env` | Konfiguration (read-only) |
-
----
-
-## 🌐 Networking
-
-```yaml
-networks:
-  webguards-net:
-    external: true  # Muss vorher erstellt sein!
-```
-
-**Network erstellen** (falls nicht vorhanden):
 ```bash
-docker network create webguards-net
+# Container läuft?
+docker ps | grep de-eventbooking
+
+# Logs prüfen
+docker logs de-eventbooking
+
+# Health Check
+curl -I https://tickets.ob5.de/
 ```
 
 ---
 
-## 🔐 Sicherheit
+## 📁 Dateistruktur auf Host
 
-- Image: `php:8-apache` (official, regelmäßig gepacht)
-- `.env` read-only mounted
-- Healthcheck alle 30s
-- Auto-restart bei Fehler
-
----
-
-## 📊 Ports
-
-- **80** → HTTP (Redirect zu 443 sollte Apache machen)
-- **443** → HTTPS (Reverse Proxy vor dem Container!)
-
-**Mit Traefik/Nginx Reverse Proxy:**
-
-```yaml
-labels:
-  - "traefik.enable=true"
-  - "traefik.http.routers.eventbooking.rule=Host(`tickets.example.com`)"
-  - "traefik.http.routers.eventbooking.entrypoints=websecure"
-  - "traefik.http.routers.eventbooking.tls.certresolver=letsencrypt"
-  - "traefik.http.services.eventbooking.loadbalancer.server.port=80"
+```
+/opt/containers/websites/de-eventbooking/
+├── .env                   (Konfiguration)
+├── config/
+├── api/
+├── public/
+├── data/                  (persistent - Tickets, QR-Codes)
+│   ├── termine.json
+│   ├── tickets.json
+│   └── qrcodes/
+├── vendor/
+└── ...
 ```
 
 ---
@@ -116,45 +148,63 @@ labels:
 ## 🔄 Updates
 
 ```bash
+cd /opt/containers/websites/de-eventbooking
 git pull origin main
-docker-compose build --no-cache
-docker-compose up -d
+docker restart de-eventbooking
 ```
 
 ---
 
 ## 🚨 Troubleshooting
 
-### Container startet nicht
+### Composer nicht installiert
 ```bash
-docker-compose logs eventbooking
+docker exec de-eventbooking apt-get update && apt-get install -y git
+docker exec de-eventbooking composer install --no-dev --optimize-autoloader
 ```
 
-### Permission Denied auf /data
+### mod_rewrite funktioniert nicht
 ```bash
-docker exec eventbooking chown -R www-data:www-data /var/www/html/data
+docker exec de-eventbooking a2enmod rewrite
+docker exec de-eventbooking apache2ctl configtest
+docker exec de-eventbooking systemctl reload apache2
 ```
 
-### Composer Install fehlgeschlagen
+### Daten-Permissions
 ```bash
-docker-compose build --no-cache --progress=plain
+docker exec de-eventbooking chown -R www-data:www-data /var/www/html/data
 ```
 
----
-
-## 📦 Image bauen & pushen
-
+### Logs ansehen
 ```bash
-# Local bauen
-docker build -t webguards/eventbooking:latest .
-
-# Zu Registry pushen
-docker push webguards/eventbooking:latest
-
-# In Portainer: Registry auf Docker Hub setzen
+docker logs -f de-eventbooking
+docker exec de-eventbooking tail -f /var/log/apache2/error.log
 ```
 
 ---
 
-**Bereit?** Stack in Portainer deployen!
+## 🌐 Domain anpassen
+
+In `docker-compose.yml` ändern:
+```yaml
+- traefik.http.routers.de-eventbooking.rule=Host(`DEINE_DOMAIN.de`)
+```
+
+Dann:
+```bash
+docker-compose up -d
+docker restart de-eventbooking
+```
+
+---
+
+## 📊 Monitoring in Portainer
+
+- **Container Stats:** Memory, CPU
+- **Logs:** Real-time Apache/PHP Logs
+- **Volumes:** `/opt/containers/websites/de-eventbooking` Status
+
+---
+
+**Bereit!** Stack in Portainer deployen. 🚀
 
