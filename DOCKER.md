@@ -27,7 +27,7 @@ Stelle sicher, dass `/opt/containers/websites/apache/servername.conf` existiert:
 ```apache
 # /opt/containers/websites/apache/servername.conf
 <VirtualHost *:80>
-    ServerName tickets.ob5.de
+    ServerName booking.ob5.dev
     DocumentRoot /var/www/html/public
     
     <Directory /var/www/html/public>
@@ -69,7 +69,7 @@ services:
       - traefik.http.routers.de-eventbooking.entrypoints=https
       - traefik.http.routers.de-eventbooking.tls=true
       - traefik.http.routers.de-eventbooking.tls.certresolver=http
-      - traefik.http.routers.de-eventbooking.rule=Host(`tickets.ob5.de`)
+      - traefik.http.routers.de-eventbooking.rule=Host(`booking.ob5.dev`)
       - traefik.http.services.de-eventbooking.loadbalancer.server.port=80
 
 networks:
@@ -122,7 +122,7 @@ docker ps | grep de-eventbooking
 docker logs de-eventbooking
 
 # Health Check
-curl -I https://tickets.ob5.de/
+curl -I https://booking.ob5.dev/
 ```
 
 ---

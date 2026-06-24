@@ -57,7 +57,7 @@ EVENT_NAME=Schlagerparty beim Griechen
 EVENT_LOCATION=Tschaikowskistraße, Rostock
 EVENT_PRICE_EUR=8
 ORGANIZER_EMAIL=deine-email@example.com
-APP_URL=https://tickets.example.com
+APP_URL=https://booking.ob5.dev
 WEBHOOK_SECRET=whsec_test_... (aus Stripe Webhook Settings)
 DATA_PATH=/var/www/html/de.eventbooking/data
 ```
@@ -75,7 +75,7 @@ chmod 666 data/termine.json data/tickets.json
 
 ```apache
 <VirtualHost *:443>
-    ServerName tickets.example.com
+    ServerName booking.ob5.dev
     DocumentRoot /var/www/html/de.eventbooking/public
     
     <Directory /var/www/html/de.eventbooking/public>
@@ -97,7 +97,7 @@ chmod 666 data/termine.json data/tickets.json
 ### 5. Stripe Webhook konfigurieren
 
 1. Gehe zu Stripe Dashboard → Webhooks
-2. Endpoint hinzufügen: `https://tickets.example.com/api/webhook-stripe`
+2. Endpoint hinzufügen: `https://booking.ob5.dev/api/webhook-stripe`
 3. Events abonnieren: `checkout.session.completed`
 4. Secret kopieren → in `.env` als `WEBHOOK_SECRET`
 
